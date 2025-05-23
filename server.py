@@ -1,18 +1,38 @@
 import rpyc
-from constRPYC import * #-
 from rpyc.utils.server import ThreadedServer
+from constRPYC import PORT
 
-class DBList(rpyc.Service):
-  value = []
+class CalculatorService(rpyc.Service):
+    def exposed_handle_command(self, command_str):
+        parts = command_str.strip().split()
+        if not parts:
+            return "Comando vazio."
 
-  def exposed_append(self, data):
-    self.value = self.value + [data]
-    return self.value
+        op = parts[0]
+        args = list(map(int, parts[1:]))
 
-  def exposed_value(self):
-    return self.value
+        match op:
+            case "add":
+                return sum(args)
+            case "subtract":
+                return args[0] - sum(args[1:])
+            case "multiply":
+                result = 1
+                for num in args:
+                    result *= num
+                return result
+            case "divide":
+                try:
+                    result = args[0]
+                    for num in args[1:]:
+                        result /= num
+                    return result
+                except ZeroDivisionError:
+                    return "Erro: divisão por zero."
+            case _:
+                return "Comando desconhecido."
 
 if __name__ == "__main__":
-  server = ThreadedServer(DBList(), port = PORT)
-  server.start()
-
+    server = ThreadedServer(CalculatorService, port=PORT)
+    print(f"Servidor RPyC ouvindo na porta {PORT}...")
+    server.start()
